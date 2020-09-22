@@ -40,7 +40,9 @@ sep_old <-
          title = course_title,
          name = course_name,
          department = course_department) %>% 
-  filter(u_grad > 10)
+  group_by(id, title, name, department) %>%
+  summarize(u_grad = sum(u_grad), .groups = "drop") %>%
+  filter(u_grad > 10) 
 
 # But this is not correct! Look for Gov 50: Data. What do you see? What can you
 # do to clean it up?
@@ -53,6 +55,22 @@ sep_old <-
 
 **Prompt:** Read in and clean the new data, creating an object called `sep_new`. 
 
+```{r Scene 1}
+sep_new <- 
+  read_excel("new_data/class_enrollment_summary_by_term_9-21-2020.xlsx", 
+             skip = 3) %>% 
+  clean_names() %>% 
+  filter(! is.na(course_title)) %>% 
+  select(-grad, -non_degree, -x_reg, -vus, -employee, 
+         -withdraw, -total, -instructor_full_name, -course_section_code) %>%
+  rename(id = course_id,
+         title = course_title,
+         name = course_name,
+         department = course_department) %>% 
+  group_by(id, title, name, department) %>%
+  summarize(u_grad = sum(u_grad), .groups = "drop") %>%
+  filter(u_grad > 10)
+```
 
 
 ### Scene 2
@@ -61,17 +79,36 @@ sep_old <-
 
 Before we start on the model, Wisdom suggests we should:
 
+```{r Scene 2.1}
+# - Identify the problem at hand: analyzing class enrollment numbers 
+# - Narrow down data to fit problem: eliminate all columns besides id, title,
+# name, department, u_grad
+# - precisely define estimand: (enrollment_new - enrollment_old)
+```
+
 
 After we have a model, Temperance suggests we should:
 
+```{r Scene 2.2}
+# - realize that real-world data is not there for us to  examine
+# - understand that correlation does not always equal causation
+# - be aware of internal and external validity
+```
 
 
 ### Scene 3
 
 **Prompt:** Which classes had the biggest increases and decreases in undergraduate enrollments between September 1 and today? Make a graphic that shows the 5 biggest increases and decreases. Make it look nice.
 
-
-
+```{r Scene 3}
+sep_dif <-
+  full_join(sep_old, sep_new, by = c("id"), keep = TRUE, suffix = c("_old", "_new")) %>%
+  mutate(enrollment_diff = u_grad_new - u_grad_old) %>%
+  select(id_new, title_new, department_new, u_grad_old, u_grad_new, enrollment_diff) %>%
+  arrange(desc(enrollment_diff))
+  head(sep_dif, 5)
+  tail(sep_dif)
+```
 
 
 ## Scene 4
